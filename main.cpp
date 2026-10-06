@@ -1,40 +1,44 @@
-#include <ncurses.h>
+#include <SFML/Graphics.hpp>
 
 const int BOARD_WIDTH = 10;
 const int BOARD_HEIGHT = 20;
+const int CELL = 32;
 
-int board[BOARD_HEIGHT][BOARD_WIDTH] = {0}; // 0 = empty, 1 = filled
+int board[BOARD_HEIGHT][BOARD_WIDTH] = {0}; 
 
-void draw_board() {
+const
+
+void draw_board(sf::RenderWindow& window) {
+    sf::RectangleShape cell({CELL - 2.f, CELL - 2.f});
+
     for (int y = 0; y < BOARD_HEIGHT; y++) {
         for (int x = 0; x < BOARD_WIDTH; x++) {
-            if (board[y][x] == 1) {
-                mvprintw(y, x * 2, "[]");
-            } else {
-                mvprintw(y, x * 2, " .");
-            }
+            cell.setPosition({x * float(CELL) + 1, y * float(CELL) + 1});
+            cell.setFillColor(board[y][x] ? sf::Color(0, 200, 255)
+                                          : sf::Color(30, 30, 40));
+            window.draw(cell);
         }
     }
 }
 
 int main() {
-    initscr();  // start ncurses mode
-    noecho();   // don't show typed characters
-    curs_set(0);    //hide the cursor
-    keypad(stdscr, TRUE);   //enable arrow key input
+    sf::RenderWindow window(sf::VideoMode({BOARD_WIDTH * CELL, BOARD_HEIGHT * CELL}), "Tetris");
+    window.setFramerateLimit(60);
 
-    // hardcode one piece into the board for now - a 2x2 square (0-piece)
+    // hardcoded 2x2 square for now
     board[0][4] = 1;
     board[0][5] = 1;
     board[1][4] = 1;
     board[1][5] = 1;
 
-    draw_board();  
-    refresh();   //ncurses doesn't draw until you call this
-    getch();    //wait for a keypress
-    
-    endwin();    //restore normal terminal mode
-    return 0;
+    while (window.isOpen()) {
+        while (const std::optional event = window.pollEvent()) {
+            if (event->is<sf::Event::Closed>())
+                window.close();
+        }
+
+        window.clear(sf::Color(15, 15, 20));
+        draw_board(window);
+        window.display();
+    }
 }
-
-

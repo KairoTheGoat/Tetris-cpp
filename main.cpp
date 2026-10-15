@@ -1,5 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <random>
+#include <iostream>
+#include <SFML/Audio.hpp>
 
 const int BOARD_WIDTH = 10; 
 const int BOARD_HEIGHT = 20;
@@ -122,8 +124,17 @@ int main() {
     sf::Clock clock;
     float dropInterval = 0.5f;
 
+    sf::SoundBuffer landBuffer;
+    if (!landBuffer.loadFromFile("assets/land.mp3")) {
+	    std::cerr << "Couldn't load assets/land.mp3\n";
+	    return 1;
+    }
+    sf::Sound landSound(landBuffer);
+    landSound.setVolume(80.f);
+
 auto lock_and_next = [&]() {
 	lock_piece(cur);
+	landSound.play(); // sound 
 	cur = spawn(random_type());
 	if (collides(cur))  // if the stack reached the top, reset.
 		for (auto& row : board)

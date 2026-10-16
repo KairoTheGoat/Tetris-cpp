@@ -30,6 +30,44 @@ const int SHAPES[7][4][4] = {
         {{0,0,1,0},{1,1,1,0},{0,0,0,0},{0,0,0,0}}, // L
 };
 
+const int TILE = 8; // size of the block
+
+sf::Texture make_atlas() {
+    sf::Image img(sf::Vector2u(TILE * 8, TILE), sf::Color::Black);
+
+    for (unsigned id = 0; id < 8; id++) {
+	sf::Color base = COLORS[id];
+	sf::Color dark(base.r / 2, base.g / 2, base.b / 2);
+	
+	for (unsigned y = 0; y < TILE; y++) {
+	    for (unsigned x = 0; x < TILE; x++) {
+		sf::Color c = base;
+		if (id != 0) {
+		   if (x == TILE - 1 || y == TILE - 1) c = dark;
+		   if ((x == 1 && (y == 1 || y == 2)) || (y == 1 && x == 2))
+		       c = sf::Color::White;
+                }
+		img.setPixel(sf::Vector2u(id * TILE + x, y), c);
+	    }
+	}
+    }
+    return sf::Texture(img);
+}
+
+void draw_cell(sf::RenderWindow& window, const sf::Texture& tex, int id, int gx, int gy) {
+	sf::Sprite s(tex);
+	s.setTextureRect(sf::IntRect({id * TILE, 0}, {TILE, TILE}));
+	s.setScale({(CELL - 2) / float(TILE), (CELL - 2) / float(TILE)});
+	s.setPosition({gx * float(CELL) + 1, gy * float(CELL) + 1});
+	window.draw(s);
+}
+
+void draw_board(sf::RenderWindow& window, const sf::Texture& tex) {
+	for (int y = 0; y < BOARD_HEIGHT; y++)
+		for (int x = 0; x < BOARD_WIDTH; x++)
+			draw_cell(window, tex, board[y][x], x, y);
+}
+
 struct Piece {
 	int shape[4][4];
 	int id;
@@ -77,25 +115,11 @@ int clear_lines() {
     return cleared;
 }
 
-void draw_board(sf::RenderWindow& window) {
-    sf::RectangleShape cell({CELL - 2.f, CELL - 2.f});
-    for (int y = 0; y < BOARD_HEIGHT; y++)
-        for (int x = 0; x < BOARD_WIDTH; x++) {
-            cell.setPosition({x * float(CELL) + 1, y * float(CELL) + 1});
-            cell.setFillColor(COLORS[board[y][x]]);
-            window.draw(cell);
-        }
-}
-
-void draw_piece(sf::RenderWindow& window, const Piece& p) {
-    sf::RectangleShape cell({CELL - 2.f, CELL - 2.f});
-    cell.setFillColor(COLORS[p.id]);
-    for (int j = 0; j < 4; j++)
-        for (int i = 0; i < 4; i++)
-            if (p.shape[j][i]) {
-                cell.setPosition({(p.x + i) * float(CELL) + 1, (p.y + j) * float(CELL) + 1});
-                window.draw(cell);
-            }
+void draw_piece(sf::RenderWindow& window, const sf::Texture& tex, const Piece& p) {
+	for (int j =0; j < 4; j++)
+	    for (int i = 0; i <4; i++)
+	    	if (p.shape[j][i])
+		   draw_cell(window, tex, p.id, p.x + i, p.y +j);
 }
 
 bool collides(const Piece& p) {
@@ -105,7 +129,7 @@ bool collides(const Piece& p) {
 			int bx = p.x + i, by = p.y + j;
 			if (bx < 0 || bx >= BOARD_WIDTH || by >= BOARD_HEIGHT) return true;
 			if (by >= 0 && board[by][bx]) return true;
-		}
+	}
 	return false;
 }
 
@@ -131,6 +155,8 @@ int main() {
     }
     sf::Sound landSound(landBuffer);
     landSound.setVolume(80.f);
+
+    sf::Texture atlas = make_atlas();
 
 auto lock_and_next = [&]() {
 	lock_piece(cur);
@@ -179,8 +205,8 @@ auto lock_and_next = [&]() {
         }
 
         window.clear(sf::Color(15, 15, 20));
-        draw_board(window);
-        draw_piece(window, cur);
+        draw_board(window, atlas);
+        draw_piece(window, atlas, cur);
         window.display();
     }
 }

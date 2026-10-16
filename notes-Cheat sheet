@@ -1,0 +1,46 @@
+# Saving a project to GitHub
+
+## Every time (project already has a repo)
+
+cd ~/Projects/Tetris-cpp
+git status
+git add main.cpp assets
+git commit -m “short description of what changed”
+git push
+
+
+## What each command does
+- `git status` = what changed since the last commit
+- `git add <files>` = pick which files go into the next commit
+- `git commit -m "..."` = save a snapshot locally, with a message
+- `git push` = upload the commits to GitHub
+
+## Rules for green squares
+- commit must be on the default branch (main)
+- `git config user.email` must match an email on my GitHub account
+- small commits, one per finished thing
+
+## Ignoring files
+- compiled binary doesn't belong in the repo
+- `echo "tetris" >> .gitignore`
+
+## First time with a new project
+
+cd ~/Projects/my-project
+git init
+git add .
+git commit -m “first commit”
+git branch -M main
+git remote add origin git@github.com:KairoTheGoat/my-project.git
+git push -u origin main
+
+
+## Dotfiles repo
+- my repo lives in `~/rice`
+- copy the config in, then add, commit, push:
+  `cp /etc/sddm.conf ~/rice/sddm/`
+
+## If something breaks
+- `git remote -v` = where does this repo push to
+- `git log --oneline` = list of commits
+- push rejected = run `git pull` first, then push again

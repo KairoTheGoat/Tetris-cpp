@@ -128,7 +128,7 @@ bool collides(const Piece& p) {
 			if (!p.shape[j][i]) continue;
 			int bx = p.x + i, by = p.y + j;
 			if (bx < 0 || bx >= BOARD_WIDTH || by >= BOARD_HEIGHT) return true;
-			if (by >= 0 && board[by][bx]) return true;
+			if (board[by][bx]) return true;
 	}
 	return false;
 }
@@ -136,7 +136,7 @@ bool collides(const Piece& p) {
 void lock_piece(const Piece& p) {
 	for (int j = 0; j < 4; j++)
 		for (int i = 0; i < 4; i++)
-			if (p.shape[j][i] && p.y + j >= 0)
+			if (p.shape[j][i])
 				board[p.y + j][p.x + i] = p.id;
 }
 
@@ -153,6 +153,15 @@ int main() {
 	    std::cerr << "Couldn't load assets/land.mp3\n";
 	    return 1;
     }
+
+    sf::SoundBuffer clearBuffer;
+    if (!clearBuffer.loadFromFile("assets/clear.mp3")) {
+	    std::cerr << "couldn't load assets/clear.mp3\n";
+	    return 1;
+    }
+    sf::Sound clearSound(clearBuffer);
+    clearSound.setVolume(80.f);
+
     sf::Sound landSound(landBuffer);
     landSound.setVolume(80.f);
 
@@ -160,11 +169,13 @@ int main() {
 
 auto lock_and_next = [&]() {
 	lock_piece(cur);
-	landSound.play(); // sound 
+	int cleared = clear_lines();
+	if (cleared > 0) clearSound.play();
+	else landSound.play();
 	cur = spawn(random_type());
-	if (collides(cur))  // if the stack reached the top, reset.
-		for (auto& row : board)
-			for (auto& c : row) c = 0;
+	if (collides(cur)) //if the stack reaches the top, reset.
+  	   for (auto& row : board)
+	       for (auto& c : row) c = 0;
 };
 
     auto try_move = [&](int dx, int dy) {

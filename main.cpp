@@ -195,7 +195,7 @@ auto lock_and_next = [&]() {
                 if (key->code == K::Left)  try_move(-1, 0);
                 if (key->code == K::Right) try_move(1, 0);
                 if (key->code == K::Down)  try_move(0, 1);
-                if (key->code == K::Up) {
+                if (key->code == K::Up && cur.id != 2) {
                     Piece r = rotated(cur);
                     for (int kick : {0, -1, 1, -2, 2}) { 
                         Piece t = r; t.x += kick;

@@ -2,6 +2,7 @@
 #include <random>
 #include <iostream>
 #include <SFML/Audio.hpp>
+#include <cmath>
 
 const int BOARD_WIDTH = 10; 
 const int BOARD_HEIGHT = 20;
@@ -140,6 +141,14 @@ void lock_piece(const Piece& p) {
 				board[p.y + j][p.x + i] = p.id;
 }
 
+enum class State { Menu, Playing };
+
+void center_text(sf::Text& t, float x, float y) {
+  sf::FloatRect b = t.getLocalBounds();
+  t.setOrigin({b.position.x + b.size.x / 2.f, b.position.y + b.size.y / 2.f});
+  t.setPosition({x, y});
+}
+
 int main() {
     sf::RenderWindow window(sf::VideoMode({BOARD_WIDTH * CELL, BOARD_HEIGHT * CELL}), "Tetris");
     window.setFramerateLimit(60);
@@ -167,13 +176,44 @@ int main() {
 
     sf::Texture atlas = make_atlas();
 
+        sf::Font font;
+    if (!font.openFromFile("assets/font.ttf")) {
+        std::cerr << "Couldn't load assets/font.ttf\n";
+        return 1;
+    }
+
+    const float W = BOARD_WIDTH * CELL;
+    const float H = BOARD_HEIGHT * CELL;
+
+    sf::Text title(font, "TETRIS", 56);
+    title.setFillColor(sf::Color(0, 200, 255));
+    center_text(title, W / 2.f, H * 0.3f);
+
+    sf::Text prompt(font, "Press ENTER to play", 20);
+    center_text(prompt, W / 2.f, H * 0.55f);
+
+    sf::Text hint(font, "ESC - quit", 16);
+    hint.setFillColor(sf::Color(130, 130, 140));
+    center_text(hint, W / 2.f, H * 0.62f);
+
+    State state = State::Menu;
+    sf::Clock menuClock;
+
+    auto start_game = [&]() {
+        for (auto& row : board)
+            for (auto& c : row) c = 0;
+        cur = spawn(random_type());
+        clock.restart();
+        state = State::Playing;
+    };
+
 auto lock_and_next = [&]() {
 	lock_piece(cur);
 	int cleared = clear_lines();
 	if (cleared > 0) clearSound.play();
 	else landSound.play();
 	cur = spawn(random_type());
-	if (collides(cur)) //if the stack reaches the top, reset.
+	if (collides(cur)) state = State::Menu;
   	   for (auto& row : board)
 	       for (auto& c : row) c = 0;
 };
@@ -185,40 +225,52 @@ auto lock_and_next = [&]() {
         return true;
     };
 
-    while (window.isOpen()) {
+        while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>())
                 window.close();
 
             if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
                 using K = sf::Keyboard::Key;
-                if (key->code == K::Left)  try_move(-1, 0);
-                if (key->code == K::Right) try_move(1, 0);
-                if (key->code == K::Down)  try_move(0, 1);
-                if (key->code == K::Up && cur.id != 2) {
-                    Piece r = rotated(cur);
-                    for (int kick : {0, -1, 1, -2, 2}) { 
-                        Piece t = r; t.x += kick;
-                        if (!collides(t)) { cur = t; break; }
+                if (state == State::Menu) {
+                    if (key->code == K::Enter)  start_game();
+                    if (key->code == K::Escape) window.close();
+                } else {
+                    if (key->code == K::Escape) state = State::Menu;
+                    if (key->code == K::Left)  try_move(-1, 0);
+                    if (key->code == K::Right) try_move(1, 0);
+                    if (key->code == K::Down)  try_move(0, 1);
+                    if (key->code == K::Up && cur.id != 2) {
+                        Piece r = rotated(cur);
+                        for (int kick : {0, -1, 1, -2, 2}) {
+                            Piece t = r; t.x += kick;
+                            if (!collides(t)) { cur = t; break; }
+                        }
                     }
-                } 
-                if (key->code == K::Space) {
-                    while (try_move(0, 1)) {}
-                    lock_and_next();
-                    clock.restart();
+                    if (key->code == K::Space) {
+                        while (try_move(0, 1)) {}
+                        lock_and_next();
+                        clock.restart();
+                    }
                 }
             }
         }
 
-        if (clock.getElapsedTime().asSeconds() >= dropInterval) {
+        if (state == State::Playing && clock.getElapsedTime().asSeconds() >= dropInterval) {
             if (!try_move(0, 1)) lock_and_next();
             clock.restart();
         }
 
         window.clear(sf::Color(15, 15, 20));
-        draw_board(window, atlas);
-        draw_piece(window, atlas, cur);
+        if (state == State::Menu) {
+            window.draw(title);
+            if (std::fmod(menuClock.getElapsedTime().asSeconds(), 1.f) < 0.6f)
+                window.draw(prompt);
+            window.draw(hint);
+        } else {
+            draw_board(window, atlas);
+            draw_piece(window, atlas, cur);
+        }
         window.display();
     }
 }
-
